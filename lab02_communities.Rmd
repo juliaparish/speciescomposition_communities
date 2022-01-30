@@ -11,8 +11,27 @@ knitr::opts_chunk$set(echo = TRUE)
 
 # Overview
 
-This machine learning analysis was completed as an assignment for my Master’s program course, Environmental Data Science 232: Machine Learning.
+This machine learning analysis was completed as an assignment for Environmental Data Science 232: Machine Learning. This assignment will conduct **unsupervised classification** techniques while working with **ecological community** datasets.
 
+- Comparing species counts between sites using **distance** metrics:<br>
+  - **Euclidean** calculates the distance between a virtualized space using Pythagorean theorem. <br>
+  - **Manhattan** calculates integer "around the block" difference. <br>
+  - **Bray-Curtis** dissimilarity is based on the sum of lowest counts of shared species between sites over the sum of all species. A dissimilarity value of 1 is completely dissimilar, i.e. no species shared. A value of 0 is completely identical. <br>
+
+- **Clustering** associates similar data points with each other, adding a grouping label. It is a form of **unsupervised learning** since we don't fit the model based on feeding it a labeled response (i.e. $y$). <br>
+  - **_K_-Means clustering** with function `kmeans()` given a pre-assigned number of clusters assigns membership centroid based on reducing within cluster variation. In _k_-means clustering, the number of clusters needs to be specified. The algorithm randomly assigns each observation to a cluster, and finds the centroid of each cluster. <br>
+  - **Voronoi diagrams** visualizes regions to nearest points, useful here to show membership of nodes to nearest centroid. <br>
+  - **Hierarchical clustering** allows for a non-specific number of clusters. <br>
+  - **Agglomerative hierarchical clustering**, such as with `diana()`, agglomerates as it builds the tree. It is good at identifying small clusters. <br>
+  - **Divisive hierarchical clustering**, such as with `agnes()`, divides as it builds the tree. It is good at identifying large clusters.<br>
+  - **Dendrograms** visualize the branching tree.<br>
+
+- **Ordination** <br>
+- **Principal Components Analyses (PCA)** <br>
+- **Non-metric MultiDimensional Scaling (NMDS)** allows for non-linear relationships. This ordination technique is implemented in the R package to apply these techniques: <br>
+    - **Unconstrained ordination** on species using NMDS; <br>
+    - Overlay with environmental gradients; and <br>
+    - **Constrained ordination** on species and environmnent using another ordination technique, **canonical correspondence analysis (CCA)**.<br>
 
 ## Load in the data
 
@@ -71,6 +90,9 @@ penguins_k <- kmeans(
 # show cluster result
 penguins_k
 
+```
+
+```{r}
 # compare clusters with species (which were not used to cluster)
 table(penguins_k$cluster, penguins$species)
 ```
@@ -121,6 +143,8 @@ table(iris_k$cluster, iris$Species)
 ```
 
 **Question**: How many observations could be considered "misclassified" if expecting petal length and width to differentiate between species?
+
+Six observations could be considered "misclassified". 
 
 ```{r}
 # extract cluster assignment per observation
@@ -258,6 +282,7 @@ Dune is a dataframe of 30 plant species at 20 sites. The columns are plant speci
 Before we calculate ecological distance between sites for `dune`, let's look at these metrics with a simpler dataset, like the example given in Chapter 8 by @kindtTreeDiversityAnalysis2005.
 
 ```{r}
+# species abundance table
 sites <- tribble(
   ~site, ~sp1, ~sp2, ~sp3,
     "A",    1,    1,    0,
@@ -266,12 +291,19 @@ sites <- tribble(
   column_to_rownames("site")
 sites
 
+```
+
+```{r}
 sites_manhattan <- vegdist(sites, method="manhattan")
 sites_manhattan
+```
 
+```{r}
 sites_euclidean <- vegdist(sites, method="euclidean")
 sites_euclidean
+```
 
+```{r}
 sites_bray <- vegdist(sites, method="bray")
 sites_bray
 ```
@@ -578,10 +610,6 @@ if (interactive()){
   ordirgl(vare.cca)
 }
 ```
-
-
-
-
 
 
 
