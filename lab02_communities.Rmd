@@ -1,39 +1,37 @@
 ---
-title: "EDS232 Lab 02: Communities"
+title: "Lab02_communties"
 author: "Julia Parish"
-date: "2022/01/31"
+date: "1/31/2022"
 output: html_document
 ---
 
-```{r setup, include=FALSE, message=FALSE, warning=FALSE}
+```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-# Overview
+### Load and plot the `penguins` dataset
 
-This machine learning analysis was completed as an assignment for Environmental Data Science 232: Machine Learning. This assignment will conduct **unsupervised classification** techniques while working with **ecological community** datasets.
+The `penguins` dataset comes from Allison Horst's [palmerpenguins](https://allisonhorst.github.io/palmerpenguins) R package and records biometric measurements of different penguin species found at Palmer Station, Antarctica [@gormanEcologicalSexualDimorphism2014]. It is an alternative to the `iris` dataset example for exploratory data analysis (to avoid association of this 1935 dataset's collector [Ronald Fisher](https://en.wikipedia.org/wiki/Ronald_Fisher) who "held strong views on race and eugenics"). Use of either dataset will be acceptable for submission of this lab (and mention of `iris` or Fisher will be dropped for next year).
 
-- Comparing species counts between sites using **distance** metrics:<br>
-  - **Euclidean** calculates the distance between a virtualized space using Pythagorean theorem. <br>
-  - **Manhattan** calculates integer "around the block" difference. <br>
-  - **Bray-Curtis** dissimilarity is based on the sum of lowest counts of shared species between sites over the sum of all species. A dissimilarity value of 1 is completely dissimilar, i.e. no species shared. A value of 0 is completely identical. <br>
-
-- **Clustering** associates similar data points with each other, adding a grouping label. It is a form of **unsupervised learning** since we don't fit the model based on feeding it a labeled response (i.e. $y$). <br>
-  - **_K_-Means clustering** with function `kmeans()` given a pre-assigned number of clusters assigns membership centroid based on reducing within cluster variation. In _k_-means clustering, the number of clusters needs to be specified. The algorithm randomly assigns each observation to a cluster, and finds the centroid of each cluster. <br>
-  - **Voronoi diagrams** visualizes regions to nearest points, useful here to show membership of nodes to nearest centroid. <br>
-  - **Hierarchical clustering** allows for a non-specific number of clusters. <br>
-  - **Agglomerative hierarchical clustering**, such as with `diana()`, agglomerates as it builds the tree. It is good at identifying small clusters. <br>
-  - **Divisive hierarchical clustering**, such as with `agnes()`, divides as it builds the tree. It is good at identifying large clusters.<br>
-  - **Dendrograms** visualize the branching tree.<br>
-
-- **Ordination** <br>
-- **Principal Components Analyses (PCA)** <br>
-- **Non-metric MultiDimensional Scaling (NMDS)** allows for non-linear relationships. This ordination technique is implemented in the R package to apply these techniques: <br>
-    - **Unconstrained ordination** on species using NMDS; <br>
-    - Overlay with environmental gradients; and <br>
-    - **Constrained ordination** on species and environmnent using another ordination technique, **canonical correspondence analysis (CCA)**.<br>
-
-## Load in the data
+```{=html}
+<style>
+.row {
+  display: flex;
+}
+.column {
+  flex: 50%;
+  padding: 5px;
+}
+</style>
+<div class="row">
+  <div class="column">
+    <img src="https://allisonhorst.github.io/palmerpenguins/reference/figures/lter_penguins.png" style="width:100%"/>
+  </div>
+  <div class="column">
+    <img src="https://allisonhorst.github.io/palmerpenguins/reference/figures/culmen_depth.png" style="width:100%"/>
+  </div>
+</div>
+```
 
 ```{r}
 # load R packages
@@ -42,11 +40,11 @@ librarian::shelf(cluster, dplyr, DT, factoextra, ggplot2, ggvoronoi, scales, h2o
 # set seed for reproducible results
 set.seed(42)
 
-# load the dataset
-data(package = 'palmerpenguins')
+```
 
+```{r}
 # load the dataset
-data("iris")
+data("penguins")
 
 # look at documentation in RStudio
 if (interactive())
@@ -55,20 +53,26 @@ if (interactive())
 # show data table
 datatable(penguins)
 
+# skim the table for a summary
+skim(penguins)
+
+# remove the rows with NAs
+penguins <- na.omit(penguins)
+
 ```
 
 ```{r}
-# plot flipper length vs body mass, species naive
-ggplot(penguins, aes(x = flipper_length_mm, y = body_mass_g)) +
+# plot length vs depth, species naive
+ggplot(penguins, aes(bill_length_mm, bill_depth_mm)) +
   geom_point()
 
-# plot petal length vs width, color by species
+# plot length vs depth, color by species
 legend_pos <- theme(
     legend.position = c(0.95, 0.05),
     legend.justification = c("right", "bottom"),
     legend.box.just = "right")
 
-ggplot(penguins, aes(x = flipper_length_mm, y = body_mass_g, color = species)) +
+ggplot(penguins, aes(bill_length_mm, bill_depth_mm, color = species)) +
   geom_point() +
   legend_pos
 ```
@@ -76,15 +80,11 @@ ggplot(penguins, aes(x = flipper_length_mm, y = body_mass_g, color = species)) +
 ### Cluster `penguins` using `kmeans()`
 
 ```{r}
-# remove na values from dataframe
-penguins <- na.omit(penguins)
-
 # cluster using kmeans
 k <- 3  # number of clusters
 
-penguins_k <- kmeans(
-  penguins %>% 
-    select(flipper_length_mm, body_mass_g), 
+penguins_k <- kmeans(penguins %>% 
+    select(bill_length_mm, bill_depth_mm), 
   centers = k)
 
 # show cluster result
@@ -97,116 +97,76 @@ penguins_k
 table(penguins_k$cluster, penguins$species)
 ```
 
-**Question**: How many observations could be considered "misclassified" if expecting flipper length and body mass to differentiate between species?
+**Bonus Question**: How many observations could be considered "misclassified" if expecting bill length and bill depth to differentiate between species?
 
-
-### Iris data
-```{r}
-
-# look at documentation in RStudio
-if (interactive())
-  help(iris)
-
-# show data table
-datatable(iris)
-```
-
-```{r}
-# plot petal length vs width, species naive
-ggplot(iris, aes(Petal.Length, Petal.Width)) +
-  geom_point()
-
-# plot petal length vs width, color by species
-legend_pos <- theme(
-    legend.position = c(0.95, 0.05),
-    legend.justification = c("right", "bottom"),
-    legend.box.just = "right")
-
-ggplot(iris, aes(Petal.Length, Petal.Width, color = Species)) +
-  geom_point() +
-  legend_pos
-```
-
-### Cluster `iris` using `kmeans()`
-
-```{r}
-iris_k <- kmeans(
-  iris %>% 
-    select(Petal.Length, Petal.Width), 
-  centers = k)
-
-# show cluster result
-iris_k
-
-# compare clusters with species (which were not used to cluster)
-table(iris_k$cluster, iris$Species)
-```
-
-**Question**: How many observations could be considered "misclassified" if expecting petal length and width to differentiate between species?
-
-Six observations could be considered "misclassified". 
 
 ```{r}
 # extract cluster assignment per observation
-Cluster = factor(iris_k$cluster)
-
-ggplot(iris, aes(Petal.Length, Petal.Width, color = Cluster)) +
+Cluster = factor(penguins_k$cluster)
+ggplot(penguins, aes(bill_length_mm, bill_depth_mm, color = Cluster)) +
   geom_point() + 
   legend_pos
 ```
 
-```{r, eval=F, echo=F}
-# **Task**: Highlight the "misclassified" points in the plot. _Hints: To get just the points misclassified, you can use `iris_k$cluster != as.integer(iris$Species)`, which can feed as the second argument into `filter(iris)`. To add another set of points to the ggplot, use `+ geom_point()` with arguments for: `data` with the additional points, `pch` [point shape](https://www.r-bloggers.com/2021/06/r-plot-pch-symbols-different-point-shapes-in-r/) with `fill=NA` for transparency and outline `color="red"`._
-obs_mis <- iris %>% 
-  filter(iris_k$cluster != as.integer(iris$Species))
+**Question 1**: Comparing the observed species plot with 3 species with the kmeans() cluster plot with 3 clusters, where does this "unsupervised" `kmeans()` technique (that does not use species to "fit" the model) produce similar versus different results? One or two sentences would suffice. Feel free to mention ranges of values along the axes.
 
-ggplot(iris, aes(Petal.Length, Petal.Width, color = Cluster)) +
+
+```{r, eval=F, echo=F}
+# **Task**: Highlight the "misclassified" points in the plot. _Hints: To get just the points misclassified, you can use `penguins_k$cluster != as.integer(penguins$species)`, which can feed as the second argument into `filter(penguins)`. To add another set of points to the ggplot, use `+ geom_point()` with arguments for: `data` with the additional points, `pch` [point shape](https://www.r-bloggers.com/2021/06/r-plot-pch-symbols-different-point-shapes-in-r/) with `fill=NA` for transparency and outline `color="red"`.
+
+obs_mis <- penguins %>% 
+  filter(penguins_k$cluster != as.integer(penguins$species))
+
+ggplot(penguins, aes(bill_length_mm, bill_depth_mm, color = Cluster)) +
   geom_point() + 
   legend_pos +
   geom_point(data = obs_mis, color="red", fill=NA, pch=21)
 ```
 
-### Plot Voronoi diagram of clustered `iris`
+### Plot Voronoi diagram of clustered `penguins`
 
 This form of clustering assigns points to the cluster based on nearest centroid. You can see the breaks more clearly with a [Voronoi diagram](https://en.wikipedia.org/wiki/Voronoi_diagram).
 
 ```{r}
 # define bounding box for geom_voronoi()
+xr <- extendrange(range(penguins$bill_length_mm), f=0.1)
+yr <- extendrange(range(penguins$bill_depth_mm), f=0.1)
+
 box <- tribble(
-  ~Petal.Length, ~Petal.Width, ~group,
-  1, 0.1, 1,
-  1, 2.5, 1,
-  7, 2.5, 1,
-  7, 0.1, 1,
-  1, 0.1, 1) %>% 
+  ~bill_length_mm, ~bill_depth_mm, ~group,
+  xr[1], yr[1], 1,
+  xr[1], yr[2], 1,
+  xr[2], yr[2], 1,
+  xr[2], yr[1], 1,
+  xr[1], yr[1], 1) %>% 
   data.frame()
 
 # cluster using kmeans
 k <- 3  # number of clusters
-
-iris_k <- kmeans(
-  iris %>% 
-    select(Petal.Length, Petal.Width), 
+penguins_k <- kmeans(
+  penguins %>% 
+    select(bill_length_mm, bill_depth_mm), 
   centers = k)
 
 # extract cluster assignment per observation
-Cluster = factor(iris_k$cluster)
+Cluster = factor(penguins_k$cluster)
 
 # extract cluster centers
-ctrs <- as.data.frame(iris_k$centers) %>% 
+ctrs <- as.data.frame(penguins_k$centers) %>% 
   mutate(Cluster = factor(1:k))
 
 # plot points with voronoi diagram showing nearest centroid
-ggplot(iris, aes(Petal.Length, Petal.Width, color = Cluster)) +
+ggplot(penguins, aes(bill_length_mm, bill_depth_mm, color = Cluster)) +
   geom_point() + 
   legend_pos +
-  geom_voronoi(
-    data = ctrs, aes(fill=Cluster), color = NA, alpha=0.5, outline = box) + 
-  geom_point(
-    data = ctrs, pch=23, cex=2, fill="black")
+  geom_voronoi(data = ctrs, aes(fill=Cluster), color = NA, alpha=0.5, 
+    outline = box) + 
+  scale_x_continuous(expand = c(0, 0)) +
+  scale_y_continuous(expand = c(0, 0)) +
+  geom_point(data = ctrs, pch=23, cex=2, fill="black")
 ```
 
-**Task**: Show the Voronoi diagram for fewer (`k=2`) and more (`k=8`) clusters to see how assignment to cluster centroids work.
+**BONUS Task**: Show the Voronoi diagram for fewer (`k=2`) and more (`k=8`) clusters to see how assignment to cluster centroids work.
 
 ```{r}
 # cluster using kmeans
@@ -273,16 +233,13 @@ if (interactive())
   help(dune)
 ```
 
-**Question**: What are the rows and columns composed of in the `dune` data frame?
-
-Dune is a dataframe of 30 plant species at 20 sites. The columns are plant species and rows are cover class observations of those species. 
+**Bonus Question**: What are the rows and columns composed of in the `dune` data frame?
 
 ### Calculate Ecological Distances on `sites`
 
 Before we calculate ecological distance between sites for `dune`, let's look at these metrics with a simpler dataset, like the example given in Chapter 8 by @kindtTreeDiversityAnalysis2005.
 
 ```{r}
-# species abundance table
 sites <- tribble(
   ~site, ~sp1, ~sp2, ~sp3,
     "A",    1,    1,    0,
@@ -290,7 +247,6 @@ sites <- tribble(
     "C",    0,    0,    1) %>% 
   column_to_rownames("site")
 sites
-
 ```
 
 ```{r}
@@ -307,6 +263,8 @@ sites_euclidean
 sites_bray <- vegdist(sites, method="bray")
 sites_bray
 ```
+
+**Question 7:** In your own words, how does Bray Curtis differ from Euclidean distance? 
 
 ### Bray-Curtis Dissimilarity on `sites` 
 
@@ -331,7 +289,6 @@ So to calculate Bray-Curtis for the example `sites`:
 
 - $B_{BC} = 1 - \frac{2 * 0}{10 + 1} = 1$
 
-
 ### Agglomerative hierarchical clustering on `dune` 
 
 See text to accompany code: _HOMLR_ [21.3.1 Agglomerative hierarchical clustering](https://bradleyboehmke.github.io/HOML/hierarchical.html#agglomerative-hierarchical-clustering).
@@ -348,7 +305,11 @@ hc1 <- hclust(d, method = "complete" )
 # Dendrogram plot of hc1
 plot(hc1, cex = 0.6, hang = -1)
 
+```
 
+**Question 9:** Which function comes first, vegdist() or hclust(), and why? See HOMLR 21.3.1 Agglomerative hierarchical clustering.
+
+```{r}
 # Compute agglomerative clustering with agnes
 hc2 <- agnes(dune, method = "complete")
 
@@ -370,7 +331,9 @@ ac <- function(x) {
 # get agglomerative coefficient for each linkage method
 purrr::map_dbl(m, ac)
 
+```
 
+```{r}
 # Compute ward linkage clustering with agnes
 hc3 <- agnes(dune, method = "ward")
 
@@ -380,6 +343,12 @@ hc3$ac
 # Dendrogram plot of hc3
 plot(hc3, which.plot = 2)
 ```
+
+**Question 11:** In your own words how does hclust() differ from agnes()? See HOMLR 21.3.1 Agglomerative hierarchical clustering and help documentation (?hclust(), ?agnes()).
+
+
+
+**Question 13:** Of the 4 methods, which is the “best” model in terms of Agglomerative Coefficient?
 
 ### Divisive hierarchical clustering on `dune` 
 
@@ -392,6 +361,8 @@ hc4 <- diana(dune)
 # Divise coefficient; amount of clustering structure found
 hc4$dc
 ```
+
+**Question 15:** In your own words how does agnes() differ from diana()? See HOMLR 21.3.1 Agglomerative hierarchical clustering, slides from Lecture 05. Clustering and help documentation (?agnes(), ?diana()).
 
 ### Determining optimal clusters
 
@@ -413,8 +384,6 @@ gridExtra::grid.arrange(p1, p2, p3, nrow = 1)
 ```
 
 ### Working with dendrograms
-
-See text to accompany code: _HOMLR_ [21.5 Working with dendrograms](https://bradleyboehmke.github.io/HOML/hierarchical.html#working-with-dendrograms).
 
 ```{r}
 # Construct dendorgram for the Ames housing example
@@ -445,38 +414,32 @@ fviz_dend(
   k_colors = "jco")
 ```
 
-# Section B. Ordination
+**Question 17:** How do the optimal number of clusters compare between methods for those with a dashed line?
 
-Ordination 
 
-## Principal Components Analysis (PCA)
+**Question 18:** In dendrogram plots, which is the biggest determinant of relatedness between observations: the distance between observations along the labeled axes or the height of their shared connection? See HOMLR 21.5 Working with dendrograms.
 
-### Prerequisites
+# Ordination
 
 ```{r}
 # get data
 url <- "https://koalaverse.github.io/homlr/data/my_basket.csv"
 my_basket <- readr::read_csv(url)
 dim(my_basket)
+```
 
+```{r}
 my_basket
 ```
 
-From [Section 1.4](https://bradleyboehmke.github.io/HOML/intro.html#data):
-
-- `my_basket.csv`: Grocery items and quantities purchased. Each observation represents a single basket of goods that were purchased together.
-  * Problem type: unsupervised basket analysis
-  * response variable: NA
-  * features: 42
-  * observations: 2,000
-  * objective: use attributes of each basket to identify common groupings of items purchased together.
-
-### Performing PCA in R
+# Performing PCA in R
 
 ```{r}
 h2o.no_progress()  # turn off progress bars for brevity
 h2o.init(max_mem_size = "5g")  # connect to H2O instance
+```
 
+```{r}
 # convert data to h2o object
 my_basket.h2o <- as.h2o(my_basket)
 
@@ -489,13 +452,25 @@ my_pca <- h2o.prcomp(
   impute_missing = TRUE,
   max_runtime_secs = 1000)
 my_pca
+```
 
+**Question 20:** Why is the pca_method of “GramSVD” chosen over “GLRM”?  
+
+
+**Question 21:** How many initial principal components are chosen with respect to dimensions of the input data?  
+
+
+```{r}
 my_pca@model$eigenvectors %>% 
   as.data.frame() %>% 
   mutate(feature = row.names(.)) %>%
   ggplot(aes(pc1, reorder(feature, pc1))) +
   geom_point()
+```
 
+**Question 23:** What category of grocery items contribute most to PC1? (These are related because they're bought most often together on a given grocery trip)
+
+```{r}
 my_pca@model$eigenvectors %>% 
   as.data.frame() %>% 
   mutate(feature = row.names(.)) %>%
@@ -503,7 +478,9 @@ my_pca@model$eigenvectors %>%
   geom_text()
 ```
 
-### Eigenvalue criterion
+**Question 25:** What category of grocery items contribute the least to PC1 but positively towards PC2?
+
+# Eigenvalue criterion
 
 ```{r}
 # Compute eigenvalues
@@ -513,11 +490,16 @@ eigen <- my_pca@model$importance["Standard deviation", ] %>%
   
 # Sum of all eigenvalues equals number of variables
 sum(eigen)
+```
+
+```{r}
 ## [1] 42
 
 # Find PCs where the sum of eigenvalues is greater than or equal to 1
 which(eigen >= 1)
+```
 
+```{r}
 # Extract PVE and CVE
 ve <- data.frame(
   PC  = my_pca@model$importance %>% seq_along(),
@@ -530,10 +512,17 @@ ve %>%
   ggplot(aes(PC, variance_explained)) +
   geom_point() +
   facet_wrap(~ metric, ncol = 1, scales = "free")
+```
 
+**Question 27:** How many principal components would you include to explain 90% of the total variance?
+
+
+```{r}
 # How many PCs required to explain at least 75% of total variability
 min(which(ve$CVE >= 0.75))
+```
 
+```{r}
 # Screee plot criterion
 data.frame(
   PC  = my_pca@model$importance %>% seq_along,
@@ -544,10 +533,13 @@ data.frame(
   geom_text(nudge_y = -.002)
 ```
 
+**Question 29:** How many principal components to include up to the elbow of the PVE, i.e. the “elbow” before plateau of dimensions explaining the least variance?
 
-## Non-metric MultiDimensional Scaling (NMDS)
 
-### Unconstrained Ordination on Species
+**Question 30:** What are a couple of disadvantages to using PCA? See HOMLR 17.6 Final thoughts.
+
+# Non-metric MultiDimensional Scaling (NMDS)
+## Unconstrained Ordination on Species
 
 ```{r}
 # vegetation and environment in lichen pastures from Vare et al (1995)
@@ -555,34 +547,61 @@ data("varespec") # species
 data("varechem") # chemistry
 
 varespec %>% tibble()
+```
+
+**Question 31:** What are the dimensions of the varespec data frame and what do rows versus columns represent?
+
+
+```{r}
 vare.dis <- vegdist(varespec)
 vare.mds0 <- monoMDS(vare.dis)
+
 stressplot(vare.mds0)
+```
 
+**Question 33:** The “stress” in a stressplot represents the difference between the observed input distance versus the fitted ordination distance. How much better is the non-metric (i.e., NMDS) fit versus a linear fit (as with PCA) in terms of \(R^2\)?
+
+
+```{r}
 ordiplot(vare.mds0, type = "t")
+```
 
+**Question 35:** What two sites are most dissimilar based on species composition for the first component MDS1? And two more most dissimilar sites for the second component MDS2?
+
+
+```{r}
 vare.mds <- metaMDS(varespec, trace = FALSE)
 vare.mds
+```
 
+```{r}
 plot(vare.mds, type = "t")
 ```
 
-### Overlay with Environment
+**Question 38:** What is the basic difference between metaMDS and monoMDS()? 
 
-See supporting text in [vegantutor.pdf](https://github.com/bbest/eds232-ml/raw/main/files/vegantutor.pdf): 
-  * 3 Environmental interpretation
-  * 3.1 Vector fitting
-  * 3.2 Surface fitting
+
+# Overlay with Environment
+
+### Environmental interpretation
+- Vector fitting <br>
+- Surface fitting <br>
 
 ```{r}
 ef <- envfit(vare.mds, varechem, permu = 999)
 ef
+```
 
+```{r}
 plot(vare.mds, display = "sites")
 plot(ef, p.max = 0.05)
+```
 
+**Question 40:** What two soil chemistry elements have the strongest negative relationship with NMDS1 that is based on species composition?
 
+```{r}
 ef <- envfit(vare.mds ~ Al + Ca, data = varechem)
+
 plot(vare.mds, display = "sites")
 plot(ef)
 
@@ -590,26 +609,49 @@ tmp <- with(varechem, ordisurf(vare.mds, Al, add = TRUE))
 ordisurf(vare.mds ~ Ca, data=varechem, add = TRUE, col = "green4")
 ```
 
+**Question 42:** Which of the two NMDS axes differentiates Ca the most, i.e. has the highest value given by the contours at the end (and not middle) of the axis?
 
-### Constrained Ordination on Species and Environment
-  
-Technically, this uses another technique `cca`, or canonical correspondence analysis.
+**Answer:**
+
+
+# Constrained Ordination on Species and Environment
+See supporting text in vegantutor.pdf:
+
+## Constrained ordination
+#### Model specification
+Technically, this uses another technique cca, or canonical correspondence analysis.
 
 ```{r}
 # ordinate on species constrained by three soil elements
 vare.cca <- cca(varespec ~ Al + P + K, varechem)
 vare.cca
+```
 
+**Question 43:** What is the difference between “constrained” versus “unconstrained” ordination within ecological context?
+
+
+```{r}
 # plot ordination
 plot(vare.cca)
+```
 
+```{r}
 # plot 3 dimensions
 ordiplot3d(vare.cca, type = "h")
-  
+```
+
+```{r}
 if (interactive()){
   ordirgl(vare.cca)
 }
 ```
 
+**Question 45:** What sites are most differentiated by CCA1, i.e. furthest apart along its axis, based on species composition AND the environment? What is the strongest environmental vector for CCA1, i.e. longest environmental vector in the direction of the CCA1 axes?
 
+**Answer:** 
+Plot 621
+Sites = black 
 
+what are the two most diff = 28, 4
+
+Envir vector - blue, what changes the most along xaxis
