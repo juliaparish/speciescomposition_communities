@@ -2,11 +2,13 @@
 title: "Lab02 Communties"
 author: "Julia Parish"
 date: "1/31/2022"
-output: html_document
+output: 
+  html_document:
+    code_folding: hide
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
 ```
 
 ### Load and plot the `penguins` dataset
@@ -54,7 +56,7 @@ if (interactive())
 datatable(penguins)
 
 # skim the table for a summary
-skim(penguins)
+#skim(penguins)
 
 # remove the rows with NAs
 penguins <- na.omit(penguins)
@@ -600,8 +602,9 @@ varespec %>% tibble()
 
 **Question 31:** What are the dimensions of the varespec data frame and what do rows versus columns represent?
 
-
 **Answer** <br>
+
+The dimensions of the *varespec* data frame is 44 columns of species scientific names and 24 rows of estimated cover values of the 44 species, which creates sites. The *varechem* provides soil chemistry characteristics of the 24 sites in *varespec* data.
 
 ```{r}
 vare.dis <- vegdist(varespec)
@@ -612,9 +615,8 @@ stressplot(vare.mds0)
 
 **Question 33:** The “stress” in a stressplot represents the difference between the observed input distance versus the fitted ordination distance. How much better is the non-metric (i.e., NMDS) fit versus a linear fit (as with PCA) in terms of \(R^2\)?
 
-
 **Answer** <br>
-
+The non-metric fit resulted in \(R^2\) equal to 0.977. The linear fit \(R^2\) is 0.873. The non-metric fits better by a difference of 0.104 than the linear fit.
 
 ```{r}
 ordiplot(vare.mds0, type = "t")
@@ -622,9 +624,8 @@ ordiplot(vare.mds0, type = "t")
 
 **Question 35:** What two sites are most dissimilar based on species composition for the first component MDS1? And two more most dissimilar sites for the second component MDS2?
 
-
 **Answer** <br>
-
+The two sites most dissimilar based on species composition for the first component MDS1 are 28 and 4. The two sites most dissimilar based on species composition for the second component MDS2 are 21 and 5.
 
 ```{r}
 vare.mds <- metaMDS(varespec, trace = FALSE)
@@ -635,11 +636,10 @@ vare.mds
 plot(vare.mds, type = "t")
 ```
 
-**Question 38:** What is the basic difference between metaMDS and monoMDS()? 
-
+**Question 38:** What is the basic difference between metaMDS() and monoMDS()? 
 
 **Answer** <br>
-
+According to Minchin (1987), NMDS is regarded as the most robust unconstrained ordination method in community ecology. MetaMDS() function uses monoMDS() in its calculations provide actual NMDS. MetaMDS() selects solutions with the smallest stresses. It adds species scores to the site ordination. 
 
 # Overlay with Environment
 
@@ -659,9 +659,8 @@ plot(ef, p.max = 0.05)
 
 **Question 40:** What two soil chemistry elements have the strongest negative relationship with NMDS1 that is based on species composition?
 
-
 **Answer** <br>
-
+The two soil chemistry elements that have the strongest negative relationship with NMDS1 based on species composition are Aluminum (Al) and Iron (Fe).
 
 ```{r}
 ef <- envfit(vare.mds ~ Al + Ca, data = varechem)
@@ -673,10 +672,10 @@ tmp <- with(varechem, ordisurf(vare.mds, Al, add = TRUE))
 ordisurf(vare.mds ~ Ca, data=varechem, add = TRUE, col = "green4")
 ```
 
-**Question 42:** Which of the two NMDS axes differentiates Ca the most, i.e. has the highest value given by the contours at the end (and not middle) of the axis?
+**Question 42:** Which of the two NMDS axes differentiates Ca the most, i.e. has the highest value given by the contours at the end (and not middle) of the axis? Describe in general terms (upper/lower/left/right/middle) where the highest and lowest values are found for Ca with respect to the ordination axes NMDS1 and NMDS2 (ie the ordination axes that describe the most variation of species composition between sites). 
 
 **Answer:** <br>
-
+The calcium (CA) vector's trajectory increases towards to upper right section of the plot and is positive on both the NMDS1 and NMDS2 axes. The NMDS1 differentiates calcium the most. Calcium values, which vary from 300 to 800 and symbolized by green lines, are highest on the center and upper right sections of the plot. 
 
 # Constrained Ordination on Species and Environment
 See supporting text in vegantutor.pdf:
@@ -694,12 +693,29 @@ vare.cca
 **Question 43:** What is the difference between “constrained” versus “unconstrained” ordination within ecological context?
 
 **Answer** <br>
+Unconstrained ordination analyzes a single data matrix, whereas constrained ordination associates two or more data sets (Borcard 2018).
 
+Unconstrained ordination: <br>
+- displays all variation in data <br>
+- useful for viewing the overall data pattern <br>
+
+Constrained ordination: <br>
+- uses prior hypothesis(es) to create plot <br>
+- relates a matrix of response variables to explanatory variables <br>
+- displays variation in the explanatory variable <br>
+- tests hypotheses and detects data trends <br>
 
 ```{r}
 # plot ordination
 plot(vare.cca)
 ```
+
+
+**Question 45:** What sites are most differentiated by CCA1, i.e. furthest apart along its axis, based on species composition AND the environment? What is the strongest environmental vector for CCA1, i.e. longest environmental vector in the direction of the CCA1 axes?
+
+**Answer:** <br>
+The sites are most differentiated by CCA1 are 28, 4.
+The strongest environmental vector for CCA1 is aluminum. 
 
 ```{r}
 # plot 3 dimensions
@@ -711,13 +727,3 @@ if (interactive()){
   ordirgl(vare.cca)
 }
 ```
-
-**Question 45:** What sites are most differentiated by CCA1, i.e. furthest apart along its axis, based on species composition AND the environment? What is the strongest environmental vector for CCA1, i.e. longest environmental vector in the direction of the CCA1 axes?
-
-**Answer:** <br>
-Plot 621
-Sites = black 
-
-what are the two most diff = 28, 4
-
-Envir vector - blue, what changes the most along xaxis
